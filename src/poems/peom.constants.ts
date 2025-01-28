@@ -1,4 +1,6 @@
 export enum PoemStatus {
   SUBMITTED = 'SUBMITTED',
   REVIEWED = 'REVIEWED',
+  RANKED = 'RANKED',
+  PUBLISHED = 'PUBLISHED',
 }

@@ -1,9 +1,18 @@
 import { NextFunction, Request, Response } from 'express';
 import { PoemService } from './poem.service';
-import { FindOptionsWhere, LessThan, MoreThan } from 'typeorm';
+import {
+  Between,
+  FindOptionsWhere,
+  In,
+  LessThan,
+  LessThanOrEqual,
+  MoreThan,
+  MoreThanOrEqual,
+} from 'typeorm';
 import { Poem } from './poem.entity';
 import { PoemStatus } from './peom.constants';
 import { UUID } from '../types';
+import logger from '../helpers/logger.helper';
 
 // INIT POEM SERVICE
 const poemService = new PoemService();
@@ -46,9 +55,13 @@ export const PoemController = {
 
       // ADD DATE RANGE CONDITION
       if (startDate)
-        condition.createdAt = MoreThan(startDate as string) as unknown as Date;
+        condition.createdAt = MoreThanOrEqual(
+          startDate as string
+        ) as unknown as Date;
       if (endDate)
-        condition.createdAt = LessThan(endDate as string) as unknown as Date;
+        condition.createdAt = LessThanOrEqual(
+          endDate as string
+        ) as unknown as Date;
 
       // FETCH POEMS
       const poems = await poemService.fetchPoems({
@@ -105,6 +118,53 @@ export const PoemController = {
       return res.status(200).json({
         message: 'Poem fetched successfully',
         data: poem,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // UPDATE MULTIPLE POEMS
+  async updateMultiplePoems(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { poems, startDate, endDate, status } = req.body;
+
+      // INITIALIZE CONDITION
+      let condition: FindOptionsWhere<Poem> = {};
+
+      // ADD DATE RANGE CONDITION
+      if (startDate && endDate) {
+        condition.createdAt = Between(
+          startDate as string,
+          endDate as string
+        ) as unknown as Date;
+      }
+      if (status) condition.status = status as PoemStatus;
+
+      // UPDATE MULTIPLE POEMS
+      await poemService.updateMultiplePoems(poems, condition);
+
+      // RETURN RESPONSE
+      return res.status(200).json({
+        message: 'Poems updated successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // UPDATE POEM
+  async updatePoem(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { messageId } = req.params;
+      const { ...poem } = req.body;
+      const updatedPoem = await poemService.updatePoem(messageId as UUID, {
+        ...poem,
+      });
+
+      return res.status(200).json({
+        message: 'Poem updated successfully',
+        data: updatedPoem,
       });
     } catch (error) {
       next(error);

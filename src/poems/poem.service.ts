@@ -1,9 +1,9 @@
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { FindOptionsWhere, In, Repository } from 'typeorm';
 import { Poem } from './poem.entity';
 import { AppDataSource } from '../data-source';
 import { validateCreatePoem } from './poem.validations';
 import { UUID } from '../types';
-import { NotFoundError } from '../helpers/errors.helper';
+import { AppError, NotFoundError } from '../helpers/errors.helper';
 import {
   getPagination,
   getPagingData,
@@ -42,6 +42,9 @@ export class PoemService {
       where: condition,
       skip,
       take,
+      order: {
+        updatedAt: 'DESC',
+      },
     });
 
     return getPagingData({ data: poems, size, page });
@@ -69,4 +72,38 @@ export class PoemService {
   async deletePoem(condition: FindOptionsWhere<Poem>): Promise<void> {
     await this.poemRepository.delete(condition);
   }
+
+  // UPDATE MULTIPLE POEMS
+  async updateMultiplePoems(poems: Poem[], condition?: FindOptionsWhere<Poem>): Promise<number> {
+    const poemsList = await this.poemRepository.find({
+      where: condition,
+    });
+    if (!poemsList.length) {
+      throw new NotFoundError('Poems not found');
+    }
+
+    const updatedPoems = await Promise.all(
+      poems.map((poem: Poem) => this.poemRepository.update(poem.id, poem))
+    );
+    return updatedPoems.length;
+  }
+
+  // UPDATE POEM
+  async updatePoem(messageId: UUID, poem: Partial<Poem>): Promise<Poem> {
+    const condition: FindOptionsWhere<Poem> = {};
+    if (messageId) condition.messageId = messageId;
+
+    // CHECK IF POEM EXISTS
+    const poemExists = await this.poemRepository.findOne({ where: condition });
+    if (!poemExists) {
+      throw new NotFoundError('Poem not found', { referenceId: messageId });
+    }
+
+    // UPDATE POEM
+    return this.poemRepository.save({
+      ...poemExists,
+      ...poem,
+    });
+  }
 }
+

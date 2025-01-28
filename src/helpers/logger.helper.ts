@@ -8,9 +8,42 @@ interface LogEntry {
   [key: string]: string;
 }
 
-// CREATE LOGGER
+interface CustomLevels extends winston.config.AbstractConfigSetLevels {
+  success: number;
+}
+
+interface CustomLogger extends winston.Logger {
+  success(message: string, ...meta: any[]): CustomLogger;
+}
+
+const customLevels: CustomLevels = {
+  emerg: 0,
+  alert: 1,
+  crit: 2,
+  error: 3,
+  warning: 4,
+  notice: 5,
+  info: 6,
+  debug: 7,
+  success: 8
+};
+
+const customColors = {
+  emerg: 'red bold',
+  alert: 'magenta bold',
+  crit: 'red',
+  error: 'red',
+  warning: 'yellow',
+  notice: 'cyan',
+  info: 'blue',
+  debug: 'gray',
+  success: 'green'
+};
+
+winston.addColors(customColors);
+
 const logger = winston.createLogger({
-  levels: winston.config.syslog.levels,
+  levels: customLevels,
   transports: [
     new winston.transports.File({
       filename: 'logs/error.log',
@@ -22,7 +55,7 @@ const logger = winston.createLogger({
     }),
     new winston.transports.File({
       filename: 'logs/activities.log',
-      level: 'info',
+      level: 'success',
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.prettyPrint()
@@ -37,7 +70,7 @@ const logger = winston.createLogger({
       ),
     }),
     new winston.transports.Console({
-      level: 'debug',
+      level: 'success',
       format: winston.format.combine(
         winston.format.colorize(),
         winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
@@ -47,7 +80,7 @@ const logger = winston.createLogger({
       ),
     }),
   ],
-});
+}) as CustomLogger;
 
 export default logger;
 
